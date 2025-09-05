@@ -383,21 +383,85 @@ class PingWiseDashboard {
         }
     }
     
+    calculateDepartmentScores(data) {
+        // Calculate Throughput Score (based on download and upload speeds)
+        const downloadScore = Math.min(100, (data.download_speed / 500) * 100);
+        const uploadScore = Math.min(100, (data.upload_speed / 100) * 100);
+        const throughputScore = Math.round((downloadScore + uploadScore) / 2);
+        
+        // Calculate Responsiveness Score (based on RTT and jitter)
+        const rttScore = Math.max(0, 100 - (data.internet_rtt - 20) / 2);
+        const jitterScore = Math.max(0, 100 - data.jitter * 5);
+        const responsivenessScore = Math.round((rttScore + jitterScore) / 2);
+        
+        // Calculate Reliability Score (based on packet loss)
+        const reliabilityScore = Math.round(Math.max(0, 100 - data.packet_loss * 20));
+        
+        // Calculate Speed Score (combination of throughput and latency)
+        const speedScore = Math.round((throughputScore * 0.7 + rttScore * 0.3));
+        
+        // Calculate Intelligence Score (based on overall network health)
+        const intelligenceScore = Math.round(
+            (throughputScore * 0.25 + responsivenessScore * 0.35 + 
+             reliabilityScore * 0.3 + speedScore * 0.1)
+        );
+        
+        return {
+            throughput: throughputScore,
+            responsiveness: responsivenessScore,
+            reliability: reliabilityScore,
+            speed: speedScore,
+            intelligence: intelligenceScore
+        };
+    }
+    
+    updateScoreBadges(scores) {
+        const scoreElements = {
+            'throughputScore': scores.throughput,
+            'responsivenessScore': scores.responsiveness,
+            'reliabilityScore': scores.reliability,
+            'speedScore': scores.speed,
+            'intelligenceScore': scores.intelligence
+        };
+        
+        Object.entries(scoreElements).forEach(([id, score]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = score;
+                // Update color based on score
+                if (score >= 80) {
+                    element.className = 'text-xl font-bold text-mint';
+                } else if (score >= 60) {
+                    element.className = 'text-xl font-bold text-amber';
+                } else {
+                    element.className = 'text-xl font-bold text-danger';
+                }
+            }
+        });
+    }
+    
     updateRealTimeData(data) {
-        // Update gauge
-        this.updateGauge(data.score);
+        // Calculate and update department scores
+        const scores = this.calculateDepartmentScores(data);
+        this.updateScoreBadges(scores);
+        
+        // Update overall gauge with average score
+        const overallScore = Math.round(
+            (scores.throughput + scores.responsiveness + scores.reliability + scores.speed) / 4
+        );
+        this.updateGauge(overallScore);
         
         // Update status text
         const statusHead = document.getElementById('statusHead');
         const statusSub = document.getElementById('statusSub');
         
-        if (data.score >= 80) {
+        if (overallScore >= 80) {
             if (statusHead) statusHead.textContent = 'Excellent Performance';
             if (statusSub) statusSub.textContent = 'Your connection is performing exceptionally well with fast speeds and low latency.';
-        } else if (data.score >= 60) {
+        } else if (overallScore >= 60) {
             if (statusHead) statusHead.textContent = 'Good Performance';
             if (statusSub) statusSub.textContent = 'Your connection is working well with minor fluctuations in performance.';
-        } else if (data.score >= 40) {
+        } else if (overallScore >= 40) {
             if (statusHead) statusHead.textContent = 'Fair Performance';
             if (statusSub) statusSub.textContent = 'Your connection has some performance issues that may affect usage.';
         } else {
@@ -416,6 +480,12 @@ class PingWiseDashboard {
         const rttInternet = document.getElementById('rttInternet');
         if (rttRouter) rttRouter.textContent = `${Math.round(data.router_rtt)} ms`;
         if (rttInternet) rttInternet.textContent = `${Math.round(data.internet_rtt)} ms`;
+        
+        // Update SVG lag displays
+        const svgRouterLag = document.getElementById('svgRouterLag');
+        const svgInternetLag = document.getElementById('svgInternetLag');
+        if (svgRouterLag) svgRouterLag.textContent = `${Math.round(data.router_rtt)} ms`;
+        if (svgInternetLag) svgInternetLag.textContent = `${Math.round(data.internet_rtt)} ms`;
         
         // Update responsiveness score
         const respScore = document.getElementById('respScore');

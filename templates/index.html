@@ -138,6 +138,9 @@
       <div class="brand-card rounded-3xl p-6 border border-edge">
         <div class="flex items-center justify-between">
           <div class="text-lg font-semibold">Throughput <span class="badge">Live</span></div>
+          <div class="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan/20 to-mint/20 border border-mint/30">
+            <span id="throughputScore" class="text-xl font-bold text-mint">92</span>
+          </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div class="bg-white/5 border border-edge rounded-2xl p-4">
@@ -163,9 +166,66 @@
       <div class="brand-card rounded-3xl p-6 border border-edge">
         <div class="flex items-center justify-between">
           <div class="text-lg font-semibold">Responsiveness <span class="badge">RTT • Jitter</span></div>
-          <div class="kbd" id="respScore">85</div>
+          <div class="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan/20 to-mint/20 border border-mint/30">
+            <span id="responsivenessScore" class="text-xl font-bold text-mint">87</span>
+          </div>
         </div>
-        <div class="h-28 mt-4" id="chartRTT"></div>
+        
+        <!-- Visual Router Representation -->
+        <div class="mt-6 mb-4 relative h-24">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 800 100">
+            <!-- Device to Router line -->
+            <line x1="80" y1="50" x2="380" y2="50" stroke="url(#grad1)" stroke-width="2" stroke-dasharray="5,5" opacity="0.8">
+              <animate attributeName="stroke-dashoffset" values="0;10" dur="1s" repeatCount="indefinite"/>
+            </line>
+            <!-- Router to Internet line -->
+            <line x1="420" y1="50" x2="720" y2="50" stroke="url(#grad2)" stroke-width="2" stroke-dasharray="5,5" opacity="0.8">
+              <animate attributeName="stroke-dashoffset" values="0;10" dur="1s" repeatCount="indefinite"/>
+            </line>
+            <defs>
+              <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#FF8BA7;stop-opacity:0.6" />
+                <stop offset="100%" style="stop-color:#FF8BA7;stop-opacity:1" />
+              </linearGradient>
+              <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#FFD59E;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#FFD59E;stop-opacity:0.6" />
+              </linearGradient>
+            </defs>
+            
+            <!-- Device Icon -->
+            <g transform="translate(50, 50)">
+              <rect x="-20" y="-15" width="40" height="30" rx="4" fill="#FF8BA7" opacity="0.2" stroke="#FF8BA7" stroke-width="2"/>
+              <rect x="-12" y="-8" width="24" height="16" fill="#FF8BA7" opacity="0.6"/>
+              <text x="0" y="-25" text-anchor="middle" class="fill-slate-300 text-xs">Device</text>
+            </g>
+            
+            <!-- Router Icon -->
+            <g transform="translate(400, 50)">
+              <circle cx="0" cy="0" r="20" fill="#C6487F" opacity="0.2" stroke="#C6487F" stroke-width="2"/>
+              <circle cx="-8" cy="-8" r="3" fill="#FFB3C1" opacity="0.8"/>
+              <circle cx="8" cy="-8" r="3" fill="#FFB3C1" opacity="0.8"/>
+              <circle cx="-8" cy="8" r="3" fill="#FFB3C1" opacity="0.8"/>
+              <circle cx="8" cy="8" r="3" fill="#FFB3C1" opacity="0.8"/>
+              <text x="0" y="-30" text-anchor="middle" class="fill-slate-300 text-xs">Router</text>
+            </g>
+            
+            <!-- Internet Icon -->
+            <g transform="translate(750, 50)">
+              <circle cx="0" cy="0" r="22" fill="none" stroke="#FFD59E" stroke-width="2" opacity="0.8"/>
+              <ellipse cx="0" cy="0" rx="22" ry="10" fill="none" stroke="#FFD59E" stroke-width="1.5" opacity="0.6"/>
+              <ellipse cx="0" cy="0" rx="10" ry="22" fill="none" stroke="#FFD59E" stroke-width="1.5" opacity="0.6"/>
+              <text x="0" y="-30" text-anchor="middle" class="fill-slate-300 text-xs">Internet</text>
+            </g>
+            
+            <!-- Lag Labels -->
+            <text x="215" y="80" text-anchor="middle" class="fill-mint text-sm font-semibold">Lag to router</text>
+            <text x="215" y="95" text-anchor="middle" class="fill-mint text-2xl font-bold" id="svgRouterLag">13 ms</text>
+            
+            <text x="585" y="80" text-anchor="middle" class="fill-amber text-sm font-semibold">Lag to internet</text>
+            <text x="585" y="95" text-anchor="middle" class="fill-amber text-2xl font-bold" id="svgInternetLag">35 ms</text>
+          </svg>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <!-- Lag to router card -->
@@ -258,7 +318,9 @@
       <div class="brand-card rounded-3xl p-6 border border-edge">
         <div class="flex items-center justify-between">
           <div class="text-lg font-semibold">Reliability <span class="badge">Availability • Loss</span></div>
-          <div class="kbd" id="relScore">100</div>
+          <div class="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan/20 to-mint/20 border border-mint/30">
+            <span id="reliabilityScore" class="text-xl font-bold text-mint">100</span>
+          </div>
         </div>
         <div class="mt-3 h-3 rounded-full bg-white/10 overflow-hidden">
           <div id="relBar" class="h-3" style="background-image: linear-gradient(90deg,#FF8BA7,#FFB3C1); width: 100%"></div>
@@ -287,7 +349,9 @@
       <div class="brand-card rounded-3xl p-6 border border-edge">
         <div class="flex items-center justify-between">
           <div class="text-lg font-semibold">Speed <span class="badge">Content • Peak</span></div>
-          <div class="kbd" id="speedScore">93</div>
+          <div class="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan/20 to-mint/20 border border-mint/30">
+            <span id="speedScore" class="text-xl font-bold text-mint">93</span>
+          </div>
         </div>
         <div class="mt-3">
           <button class="w-full rounded-xl border border-edge py-2 bg-magenta/25 hover:bg-magenta/30">Check content speed</button>
@@ -314,7 +378,12 @@
     <!-- Intelligence & Tools -->
     <section class="col-span-12 space-y-6">
       <div class="brand-card rounded-3xl p-6 border border-edge">
-        <div class="text-lg font-semibold mb-4">Network Intelligence</div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-lg font-semibold">Network Intelligence</div>
+          <div class="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan/20 to-mint/20 border border-mint/30">
+            <span id="intelligenceScore" class="text-xl font-bold text-mint">95</span>
+          </div>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div class="bg-white/5 border border-edge rounded-2xl p-4">
             <div class="text-sm text-slate-300">Public IP</div>
