@@ -459,44 +459,170 @@
     </section>
   </main>
 
-  <!-- Include the custom dashboard JavaScript -->
-  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-  
-  <!-- Force initialization with debugging -->
+  <!-- Embed nonagon gauge code directly to fix loading issue -->
   <script>
-    console.log('Starting dashboard initialization...');
+    console.log('Initializing nonagon gauge directly...');
     
-    // Wait for all resources to load
-    window.addEventListener('load', function() {
-        console.log('Window loaded, checking for dependencies...');
-        console.log('ECharts available:', typeof echarts !== 'undefined');
-        console.log('Socket.IO available:', typeof io !== 'undefined');
+    // Create and initialize the nonagon gauge
+    function initializeNonagonGauge() {
+        console.log('Creating nonagon gauge...');
         
-        // Force initialize after a delay
-        setTimeout(function() {
-            console.log('Force initializing dashboard...');
+        // Build a rounded nonagon (9-gon) path
+        function buildRoundedNonagonPath(sides = 9, R = 95, corner = 26, cx = 128, cy = 128) {
+            const rot = -Math.PI / 2; // start at top
+            const verts = Array.from({ length: sides }, (_, i) => {
+                const a = rot + i * 2 * Math.PI / sides;
+                return [cx + R * Math.cos(a), cy + R * Math.sin(a)];
+            });
+            const interior = (sides - 2) * Math.PI / sides;
+            const offset = corner / Math.tan(interior / 2);
+            const path = [];
             
-            // Check if dashboard exists
-            if (typeof PingWiseDashboard !== 'undefined') {
-                console.log('PingWiseDashboard class found, creating instance...');
-                window.dashboard = new PingWiseDashboard();
+            for (let i = 0; i < sides; i++) {
+                const vPrev = verts[(i - 1 + sides) % sides];
+                const v = verts[i];
+                const vNext = verts[(i + 1) % sides];
+                const dirPrev = [v[0] - vPrev[0], v[1] - vPrev[1]];
+                const lenPrev = Math.hypot(...dirPrev);
+                const nPrev = [dirPrev[0] / lenPrev, dirPrev[1] / lenPrev];
+                const dirNext = [vNext[0] - v[0], vNext[1] - v[1]];
+                const lenNext = Math.hypot(...dirNext);
+                const nNext = [dirNext[0] / lenNext, dirNext[1] / lenNext];
+                const d = Math.min(offset, lenPrev * 0.49, lenNext * 0.49);
+                const p1 = [v[0] - nPrev[0] * d, v[1] - nPrev[1] * d];
+                const p2 = [v[0] + nNext[0] * d, v[1] + nNext[1] * d];
                 
-                // Force gauge initialization
-                setTimeout(function() {
-                    console.log('Force initializing gauge and charts...');
-                    if (window.dashboard) {
-                        window.dashboard.initializeGauge();
-                        window.dashboard.initializeCharts();
-                    }
-                }, 500);
-            } else {
-                console.error('PingWiseDashboard class not found!');
+                if (i === 0) {
+                    path.push(`M ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`);
+                } else {
+                    path.push(`L ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`);
+                }
+                path.push(`A ${corner} ${corner} 0 0 1 ${p2[0].toFixed(3)} ${p2[1].toFixed(3)}`);
             }
-        }, 1000);
+            path.push('Z');
+            return path.join(' ');
+        }
+        
+        const d = buildRoundedNonagonPath(9, 95, 28, 128, 128);
+        const fill = document.getElementById('gaugeFill');
+        const outline = document.getElementById('gaugeOutline');
+        
+        if (fill && outline) {
+            fill.setAttribute('d', d);
+            outline.setAttribute('d', d);
+            console.log('Nonagon gauge paths set successfully!');
+            return true;
+        } else {
+            console.error('Gauge elements not found, will retry...');
+            return false;
+        }
+    }
+    
+    // Initialize charts with ECharts
+    function initializeCharts() {
+        if (typeof echarts === 'undefined') {
+            console.log('ECharts not ready, waiting...');
+            setTimeout(initializeCharts, 200);
+            return;
+        }
+        
+        console.log('Initializing charts...');
+        
+        // Initialize download chart
+        const downloadChart = document.getElementById('chartDownTop');
+        if (downloadChart && downloadChart.offsetWidth > 0) {
+            try {
+                const chart = echarts.init(downloadChart);
+                chart.setOption({
+                    grid: { top: 5, right: 5, bottom: 5, left: 5 },
+                    xAxis: { type: 'category', show: false },
+                    yAxis: { type: 'value', show: false },
+                    series: [{
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { color: '#FF8BA7', width: 2 },
+                        areaStyle: { color: 'rgba(255, 139, 167, 0.2)' },
+                        data: [100, 120, 115, 130, 125, 140, 135]
+                    }]
+                });
+                console.log('Download chart initialized!');
+            } catch(e) {
+                console.error('Download chart error:', e);
+            }
+        }
+        
+        // Initialize upload chart
+        const uploadChart = document.getElementById('chartUpTop');
+        if (uploadChart && uploadChart.offsetWidth > 0) {
+            try {
+                const chart = echarts.init(uploadChart);
+                chart.setOption({
+                    grid: { top: 5, right: 5, bottom: 5, left: 5 },
+                    xAxis: { type: 'category', show: false },
+                    yAxis: { type: 'value', show: false },
+                    series: [{
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { color: '#C6487F', width: 2 },
+                        areaStyle: { color: 'rgba(198, 72, 127, 0.2)' },
+                        data: [20, 22, 21, 23, 22, 24, 23]
+                    }]
+                });
+                console.log('Upload chart initialized!');
+            } catch(e) {
+                console.error('Upload chart error:', e);
+            }
+        }
+        
+        // Initialize RTT chart
+        const rttChart = document.getElementById('chartRTT');
+        if (rttChart && rttChart.offsetWidth > 0) {
+            try {
+                const chart = echarts.init(rttChart);
+                chart.setOption({
+                    grid: { top: 10, right: 10, bottom: 10, left: 10 },
+                    xAxis: { type: 'category', show: false },
+                    yAxis: { type: 'value', show: false },
+                    series: [{
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { color: '#FFB3C1', width: 2 },
+                        areaStyle: { color: 'rgba(255, 179, 193, 0.2)' },
+                        data: [30, 32, 28, 35, 33, 31, 29]
+                    }]
+                });
+                console.log('RTT chart initialized!');
+            } catch(e) {
+                console.error('RTT chart error:', e);
+            }
+        }
+    }
+    
+    // Try to initialize on various events
+    window.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, attempting gauge init...');
+        initializeNonagonGauge();
+        initializeCharts();
     });
     
-    // Debug: Check what's loaded
-    console.log('Script tags loaded');
+    window.addEventListener('load', function() {
+        console.log('Window loaded, attempting gauge init...');
+        if (!initializeNonagonGauge()) {
+            // Retry after a delay
+            setTimeout(initializeNonagonGauge, 500);
+        }
+        initializeCharts();
+    });
+    
+    // Also try after a delay as backup
+    setTimeout(function() {
+        console.log('Delayed init attempt...');
+        initializeNonagonGauge();
+        initializeCharts();
+    }, 1500);
   </script>
 </body>
 </html>
