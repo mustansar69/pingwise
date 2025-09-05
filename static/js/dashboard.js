@@ -148,38 +148,49 @@ class PingWiseDashboard {
     }
     
     initializeCharts() {
-        // Delay chart initialization to ensure DOM is ready
-        setTimeout(() => {
-            // Initialize download throughput chart
-            const downloadChart = document.getElementById('chartDownTop');
-            if (downloadChart) {
-                this.charts.download = echarts.init(downloadChart);
-                this.setupThroughputChart(this.charts.download, 'download');
-            }
-            
-            // Initialize upload throughput chart
-            const uploadChart = document.getElementById('chartUpTop');
-            if (uploadChart) {
-                this.charts.upload = echarts.init(uploadChart);
-                this.setupThroughputChart(this.charts.upload, 'upload');
-            }
-            
-            // Initialize RTT chart
-            const rttChart = document.getElementById('chartRTT');
-            if (rttChart) {
-                this.charts.rtt = echarts.init(rttChart);
-                this.setupRTTChart(this.charts.rtt);
-            }
-            
-            // Initialize Ping chart
-            const pingChart = document.getElementById('chartPing');
-            if (pingChart) {
-                this.charts.ping = echarts.init(pingChart);
-                this.setupPingChart(this.charts.ping);
-            }
-            
-            console.log('Charts initialized:', Object.keys(this.charts));
-        }, 100);
+        console.log('Initializing charts...');
+        
+        // Initialize download throughput chart
+        const downloadChart = document.getElementById('chartDownTop');
+        if (downloadChart) {
+            this.charts.download = echarts.init(downloadChart);
+            this.setupThroughputChart(this.charts.download, 'download');
+            console.log('Download chart initialized');
+        } else {
+            console.error('Download chart element not found');
+        }
+        
+        // Initialize upload throughput chart
+        const uploadChart = document.getElementById('chartUpTop');
+        if (uploadChart) {
+            this.charts.upload = echarts.init(uploadChart);
+            this.setupThroughputChart(this.charts.upload, 'upload');
+            console.log('Upload chart initialized');
+        } else {
+            console.error('Upload chart element not found');
+        }
+        
+        // Initialize RTT chart
+        const rttChart = document.getElementById('chartRTT');
+        if (rttChart) {
+            this.charts.rtt = echarts.init(rttChart);
+            this.setupRTTChart(this.charts.rtt);
+            console.log('RTT chart initialized');
+        } else {
+            console.error('RTT chart element not found');
+        }
+        
+        // Initialize Ping chart
+        const pingChart = document.getElementById('chartPing');
+        if (pingChart) {
+            this.charts.ping = echarts.init(pingChart);
+            this.setupPingChart(this.charts.ping);
+            console.log('Ping chart initialized');
+        } else {
+            console.error('Ping chart element not found');
+        }
+        
+        console.log('Charts initialized:', Object.keys(this.charts));
     }
     
     setupThroughputChart(chart, type) {
@@ -324,6 +335,8 @@ class PingWiseDashboard {
     }
     
     initializeGauge() {
+        console.log('Initializing gauge...');
+        
         // Build a rounded nonagon (9-gon) path
         function buildRoundedNonagonPath(sides = 9, R = 95, corner = 26, cx = 128, cy = 128) {
             const rot = -Math.PI / 2; // start at top
@@ -360,22 +373,22 @@ class PingWiseDashboard {
             return path.join(' ');
         }
         
-        // Wait for DOM to be ready
-        setTimeout(() => {
-            const d = buildRoundedNonagonPath(9, 95, 28, 128, 128);
-            const fill = document.getElementById('gaugeFill');
-            const outline = document.getElementById('gaugeOutline');
-            if (fill && outline) {
-                fill.setAttribute('d', d);
-                outline.setAttribute('d', d);
-                console.log('Gauge initialized successfully');
-            } else {
-                console.error('Gauge elements not found:', { fill: !!fill, outline: !!outline });
-            }
-            
-            // Initialize with default score
-            this.updateGauge(85);
-        }, 50);
+        const d = buildRoundedNonagonPath(9, 95, 28, 128, 128);
+        const fill = document.getElementById('gaugeFill');
+        const outline = document.getElementById('gaugeOutline');
+        
+        console.log('Gauge elements found:', { fill: !!fill, outline: !!outline });
+        
+        if (fill && outline) {
+            fill.setAttribute('d', d);
+            outline.setAttribute('d', d);
+            console.log('Gauge SVG paths set successfully');
+        } else {
+            console.error('Gauge elements not found in DOM');
+        }
+        
+        // Initialize with default score
+        this.updateGauge(85);
     }
     
     updateGauge(score) {
@@ -742,29 +755,19 @@ class PingWiseDashboard {
     }
 }
 
-// Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Wait a bit to ensure all DOM elements are rendered
-    setTimeout(() => {
+// Simple initialization approach
+function initializeDashboard() {
+    console.log('Initializing dashboard...');
+    if (!window.dashboard) {
         window.dashboard = new PingWiseDashboard();
-    }, 200);
-});
+        console.log('Dashboard created');
+    }
+}
 
-// Backup initialization for cases where DOMContentLoaded already fired
+// Initialize dashboard when DOM is loaded
 if (document.readyState === 'loading') {
-    // Loading hasn't finished yet
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            if (!window.dashboard) {
-                window.dashboard = new PingWiseDashboard();
-            }
-        }, 200);
-    });
+    document.addEventListener('DOMContentLoaded', initializeDashboard);
 } else {
-    // DOMContentLoaded has already fired
-    setTimeout(() => {
-        if (!window.dashboard) {
-            window.dashboard = new PingWiseDashboard();
-        }
-    }, 300);
+    // DOM is already loaded
+    initializeDashboard();
 }
