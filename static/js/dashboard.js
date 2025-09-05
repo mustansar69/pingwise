@@ -150,47 +150,105 @@ class PingWiseDashboard {
     initializeCharts() {
         console.log('Initializing charts...');
         
+        // Wait for ECharts to be available
+        if (typeof echarts === 'undefined') {
+            console.log('ECharts not loaded yet, retrying...');
+            setTimeout(() => this.initializeCharts(), 200);
+            return;
+        }
+        
         // Initialize download throughput chart
         const downloadChart = document.getElementById('chartDownTop');
-        if (downloadChart) {
-            this.charts.download = echarts.init(downloadChart);
-            this.setupThroughputChart(this.charts.download, 'download');
-            console.log('Download chart initialized');
+        if (downloadChart && downloadChart.offsetWidth > 0) {
+            try {
+                this.charts.download = echarts.init(downloadChart);
+                this.setupThroughputChart(this.charts.download, 'download');
+                console.log('Download chart initialized');
+            } catch (e) {
+                console.error('Error initializing download chart:', e);
+            }
         } else {
-            console.error('Download chart element not found');
+            console.log('Download chart element not ready, will retry...');
+            setTimeout(() => this.retryChartInit('download'), 500);
         }
         
         // Initialize upload throughput chart
         const uploadChart = document.getElementById('chartUpTop');
-        if (uploadChart) {
-            this.charts.upload = echarts.init(uploadChart);
-            this.setupThroughputChart(this.charts.upload, 'upload');
-            console.log('Upload chart initialized');
+        if (uploadChart && uploadChart.offsetWidth > 0) {
+            try {
+                this.charts.upload = echarts.init(uploadChart);
+                this.setupThroughputChart(this.charts.upload, 'upload');
+                console.log('Upload chart initialized');
+            } catch (e) {
+                console.error('Error initializing upload chart:', e);
+            }
         } else {
-            console.error('Upload chart element not found');
+            console.log('Upload chart element not ready, will retry...');
+            setTimeout(() => this.retryChartInit('upload'), 500);
         }
         
         // Initialize RTT chart
         const rttChart = document.getElementById('chartRTT');
-        if (rttChart) {
-            this.charts.rtt = echarts.init(rttChart);
-            this.setupRTTChart(this.charts.rtt);
-            console.log('RTT chart initialized');
+        if (rttChart && rttChart.offsetWidth > 0) {
+            try {
+                this.charts.rtt = echarts.init(rttChart);
+                this.setupRTTChart(this.charts.rtt);
+                console.log('RTT chart initialized');
+            } catch (e) {
+                console.error('Error initializing RTT chart:', e);
+            }
         } else {
-            console.error('RTT chart element not found');
+            console.log('RTT chart element not ready, will retry...');
+            setTimeout(() => this.retryChartInit('rtt'), 500);
         }
         
         // Initialize Ping chart
         const pingChart = document.getElementById('chartPing');
-        if (pingChart) {
-            this.charts.ping = echarts.init(pingChart);
-            this.setupPingChart(this.charts.ping);
-            console.log('Ping chart initialized');
+        if (pingChart && pingChart.offsetWidth > 0) {
+            try {
+                this.charts.ping = echarts.init(pingChart);
+                this.setupPingChart(this.charts.ping);
+                console.log('Ping chart initialized');
+            } catch (e) {
+                console.error('Error initializing ping chart:', e);
+            }
         } else {
-            console.error('Ping chart element not found');
+            console.log('Ping chart element not ready, will retry...');
+            setTimeout(() => this.retryChartInit('ping'), 500);
         }
         
-        console.log('Charts initialized:', Object.keys(this.charts));
+        console.log('Charts initialization attempted');
+    }
+    
+    retryChartInit(chartType) {
+        const elements = {
+            'download': 'chartDownTop',
+            'upload': 'chartUpTop',
+            'rtt': 'chartRTT',
+            'ping': 'chartPing'
+        };
+        
+        const element = document.getElementById(elements[chartType]);
+        if (element && element.offsetWidth > 0 && !this.charts[chartType]) {
+            try {
+                this.charts[chartType] = echarts.init(element);
+                switch(chartType) {
+                    case 'download':
+                    case 'upload':
+                        this.setupThroughputChart(this.charts[chartType], chartType);
+                        break;
+                    case 'rtt':
+                        this.setupRTTChart(this.charts[chartType]);
+                        break;
+                    case 'ping':
+                        this.setupPingChart(this.charts[chartType]);
+                        break;
+                }
+                console.log(`${chartType} chart initialized on retry`);
+            } catch (e) {
+                console.error(`Error initializing ${chartType} chart on retry:`, e);
+            }
+        }
     }
     
     setupThroughputChart(chart, type) {
@@ -337,58 +395,65 @@ class PingWiseDashboard {
     initializeGauge() {
         console.log('Initializing gauge...');
         
-        // Build a rounded nonagon (9-gon) path
-        function buildRoundedNonagonPath(sides = 9, R = 95, corner = 26, cx = 128, cy = 128) {
-            const rot = -Math.PI / 2; // start at top
-            const verts = Array.from({ length: sides }, (_, i) => {
-                const a = rot + i * 2 * Math.PI / sides;
-                return [cx + R * Math.cos(a), cy + R * Math.sin(a)];
-            });
-            const interior = (sides - 2) * Math.PI / sides;
-            const offset = corner / Math.tan(interior / 2);
-            const path = [];
-            
-            for (let i = 0; i < sides; i++) {
-                const vPrev = verts[(i - 1 + sides) % sides];
-                const v = verts[i];
-                const vNext = verts[(i + 1) % sides];
-                const dirPrev = [v[0] - vPrev[0], v[1] - vPrev[1]];
-                const lenPrev = Math.hypot(...dirPrev);
-                const nPrev = [dirPrev[0] / lenPrev, dirPrev[1] / lenPrev];
-                const dirNext = [vNext[0] - v[0], vNext[1] - v[1]];
-                const lenNext = Math.hypot(...dirNext);
-                const nNext = [dirNext[0] / lenNext, dirNext[1] / lenNext];
-                const d = Math.min(offset, lenPrev * 0.49, lenNext * 0.49);
-                const p1 = [v[0] - nPrev[0] * d, v[1] - nPrev[1] * d];
-                const p2 = [v[0] + nNext[0] * d, v[1] + nNext[1] * d];
+        // Try multiple times to ensure DOM is ready
+        const attemptInit = (retries = 3) => {
+            // Build a rounded nonagon (9-gon) path
+            function buildRoundedNonagonPath(sides = 9, R = 95, corner = 26, cx = 128, cy = 128) {
+                const rot = -Math.PI / 2; // start at top
+                const verts = Array.from({ length: sides }, (_, i) => {
+                    const a = rot + i * 2 * Math.PI / sides;
+                    return [cx + R * Math.cos(a), cy + R * Math.sin(a)];
+                });
+                const interior = (sides - 2) * Math.PI / sides;
+                const offset = corner / Math.tan(interior / 2);
+                const path = [];
                 
-                if (i === 0) {
-                    path.push(`M ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`);
-                } else {
-                    path.push(`L ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`);
+                for (let i = 0; i < sides; i++) {
+                    const vPrev = verts[(i - 1 + sides) % sides];
+                    const v = verts[i];
+                    const vNext = verts[(i + 1) % sides];
+                    const dirPrev = [v[0] - vPrev[0], v[1] - vPrev[1]];
+                    const lenPrev = Math.hypot(...dirPrev);
+                    const nPrev = [dirPrev[0] / lenPrev, dirPrev[1] / lenPrev];
+                    const dirNext = [vNext[0] - v[0], vNext[1] - v[1]];
+                    const lenNext = Math.hypot(...dirNext);
+                    const nNext = [dirNext[0] / lenNext, dirNext[1] / lenNext];
+                    const d = Math.min(offset, lenPrev * 0.49, lenNext * 0.49);
+                    const p1 = [v[0] - nPrev[0] * d, v[1] - nPrev[1] * d];
+                    const p2 = [v[0] + nNext[0] * d, v[1] + nNext[1] * d];
+                    
+                    if (i === 0) {
+                        path.push(`M ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`);
+                    } else {
+                        path.push(`L ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`);
+                    }
+                    path.push(`A ${corner} ${corner} 0 0 1 ${p2[0].toFixed(3)} ${p2[1].toFixed(3)}`);
                 }
-                path.push(`A ${corner} ${corner} 0 0 1 ${p2[0].toFixed(3)} ${p2[1].toFixed(3)}`);
+                path.push('Z');
+                return path.join(' ');
             }
-            path.push('Z');
-            return path.join(' ');
-        }
+            
+            const d = buildRoundedNonagonPath(9, 95, 28, 128, 128);
+            const fill = document.getElementById('gaugeFill');
+            const outline = document.getElementById('gaugeOutline');
+            
+            if (fill && outline) {
+                fill.setAttribute('d', d);
+                outline.setAttribute('d', d);
+                console.log('Gauge SVG paths set successfully');
+                // Initialize with default score
+                this.updateGauge(85);
+                return true;
+            } else if (retries > 0) {
+                console.log(`Gauge elements not ready, retrying... (${retries} attempts left)`);
+                setTimeout(() => attemptInit(retries - 1), 100);
+            } else {
+                console.error('Failed to initialize gauge after multiple attempts');
+            }
+            return false;
+        };
         
-        const d = buildRoundedNonagonPath(9, 95, 28, 128, 128);
-        const fill = document.getElementById('gaugeFill');
-        const outline = document.getElementById('gaugeOutline');
-        
-        console.log('Gauge elements found:', { fill: !!fill, outline: !!outline });
-        
-        if (fill && outline) {
-            fill.setAttribute('d', d);
-            outline.setAttribute('d', d);
-            console.log('Gauge SVG paths set successfully');
-        } else {
-            console.error('Gauge elements not found in DOM');
-        }
-        
-        // Initialize with default score
-        this.updateGauge(85);
+        attemptInit();
     }
     
     updateGauge(score) {
@@ -871,10 +936,14 @@ function initializeDashboard() {
     }
 }
 
-// Initialize dashboard when DOM is loaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDashboard);
-} else {
-    // DOM is already loaded
+// Initialize dashboard when everything is fully loaded
+window.addEventListener('load', () => {
+    console.log('Window loaded, initializing dashboard...');
     initializeDashboard();
+});
+
+// Backup initialization
+if (document.readyState === 'complete') {
+    // If already loaded, init now
+    setTimeout(initializeDashboard, 100);
 }
