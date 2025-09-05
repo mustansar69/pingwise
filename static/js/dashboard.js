@@ -1,3 +1,6 @@
+// Debug: Check if script loads
+console.log('dashboard.js loaded!');
+
 // Theme colors for charts (Maroon palette)
 const THEME = { 
   rose:'#FF8BA7', 
@@ -927,23 +930,30 @@ class PingWiseDashboard {
     }
 }
 
+// Export class to global scope
+window.PingWiseDashboard = PingWiseDashboard;
+
 // Simple initialization approach
 function initializeDashboard() {
     console.log('Initializing dashboard...');
-    if (!window.dashboard) {
-        window.dashboard = new PingWiseDashboard();
-        console.log('Dashboard created');
+    try {
+        if (!window.dashboard) {
+            window.dashboard = new PingWiseDashboard();
+            console.log('Dashboard created successfully');
+            
+            // Force gauge and charts initialization
+            setTimeout(() => {
+                if (window.dashboard) {
+                    console.log('Forcing gauge and chart initialization...');
+                    window.dashboard.initializeGauge();
+                    window.dashboard.initializeCharts();
+                }
+            }, 100);
+        }
+    } catch (error) {
+        console.error('Error creating dashboard:', error);
     }
 }
 
-// Initialize dashboard when everything is fully loaded
-window.addEventListener('load', () => {
-    console.log('Window loaded, initializing dashboard...');
-    initializeDashboard();
-});
-
-// Backup initialization
-if (document.readyState === 'complete') {
-    // If already loaded, init now
-    setTimeout(initializeDashboard, 100);
-}
+// Make function available globally
+window.initializeDashboard = initializeDashboard;

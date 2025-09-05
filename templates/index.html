@@ -461,5 +461,42 @@
 
   <!-- Include the custom dashboard JavaScript -->
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  
+  <!-- Force initialization with debugging -->
+  <script>
+    console.log('Starting dashboard initialization...');
+    
+    // Wait for all resources to load
+    window.addEventListener('load', function() {
+        console.log('Window loaded, checking for dependencies...');
+        console.log('ECharts available:', typeof echarts !== 'undefined');
+        console.log('Socket.IO available:', typeof io !== 'undefined');
+        
+        // Force initialize after a delay
+        setTimeout(function() {
+            console.log('Force initializing dashboard...');
+            
+            // Check if dashboard exists
+            if (typeof PingWiseDashboard !== 'undefined') {
+                console.log('PingWiseDashboard class found, creating instance...');
+                window.dashboard = new PingWiseDashboard();
+                
+                // Force gauge initialization
+                setTimeout(function() {
+                    console.log('Force initializing gauge and charts...');
+                    if (window.dashboard) {
+                        window.dashboard.initializeGauge();
+                        window.dashboard.initializeCharts();
+                    }
+                }, 500);
+            } else {
+                console.error('PingWiseDashboard class not found!');
+            }
+        }, 1000);
+    });
+    
+    // Debug: Check what's loaded
+    console.log('Script tags loaded');
+  </script>
 </body>
 </html>
