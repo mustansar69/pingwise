@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FluxNet — ORB‑Inspired v2 (Maroon Theme)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+          colors: {
+            night: '#0b0608',          // page bg (deep maroon/near-black)
+            nebula: '#15090e',         // card bg (rich wine)
+            edge: 'rgba(255,255,255,0.14)',
+            mint: '#FFB3C1',           // blush highlight
+            cyan: '#FF8BA7',           // rose accent
+            magenta: '#C6487F',        // plum accent
+            amber: '#FFD59E',          // peach
+            danger: '#FF6C8F',
+          },
+          boxShadow: {
+            glow: '0 0 0 1px rgba(255,255,255,0.06), 0 10px 40px rgba(198, 72, 127, .16)'
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    .chip { display:flex; align-items:center; justify-content:space-between; padding:.6rem .8rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); border-radius:.85rem; backdrop-filter: blur(2px); }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:.75rem; padding:.25rem .5rem; border-radius:.5rem; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18); }
+    .pill { padding:.35rem .7rem; border-radius:9999px; }
+    .good{ color:#FFB3C1 } .warn{ color:#FFD59E } .bad{ color:#FF6C8F }
+    .badge{ font-size:.7rem; padding:.15rem .45rem; border-radius:.6rem; border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06)); }
+
+    /* Brand identity — Maroon */
+    body{
+      background:
+        radial-gradient(1200px 800px at 0% 0%, rgba(198,72,127,.16), transparent 45%),
+        radial-gradient(900px 600px at 100% 5%, rgba(255,139,167,.10), transparent 50%),
+        radial-gradient(900px 600px at 50% 100%, rgba(255,213,158,.08), transparent 55%),
+        #0b0608;
+    }
+    .brand-card{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
+        radial-gradient(120% 120% at 0% 0%, rgba(255,139,167,0.08), transparent 60%),
+        radial-gradient(120% 120% at 100% 0%, rgba(198,72,127,0.08), transparent 60%),
+        #15090e;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 12px 44px rgba(198,72,127,.18);
+    }
+    .btn-aurora{ background-image: linear-gradient(90deg, #FF8BA7, #FFD59E); color:#2a0f15; font-weight:600; border:0; box-shadow:0 8px 24px rgba(255,139,167,.30); }
+    .btn-aurora:hover{ filter: brightness(1.06); }
+      .nano-spin{ transform-origin:50% 50%; animation:spin 16s linear infinite; }
+    @keyframes spin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+  </style>
+</head>
+<body class="bg-night text-slate-200 min-h-screen">
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-night/80 backdrop-blur border-b border-edge">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-8 w-8 rounded-xl bg-gradient-to-br from-cyan to-mint shadow-glow"></div>
+        <div class="font-semibold tracking-wide">FLUX<span class="text-mint">NET</span></div>
+        <div class="hidden md:flex items-center gap-1 ml-4">
+          <button class="pill bg-white/10 border border-edge">1 min</button>
+          <button class="pill hover:bg-white/10 border border-edge">5 min</button>
+          <button class="pill hover:bg-white/10 border border-edge">1 hour</button>
+          <button class="pill hover:bg-white/10 border border-edge">24 hours</button>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400">Server</span>
+        <select class="bg-white/10 border border-edge rounded-lg text-xs px-2 py-1 outline-none">
+          <option>Auto</option><option>Cloudflare</option><option>Google</option><option>OpenAI</option><option>AWS</option>
+        </select>
+        <button class="ml-2 px-3 py-1.5 rounded-lg btn-aurora text-sm">Start</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 grid grid-cols-12 gap-6">
+    <!-- Left: Hex gauge + status -->
+    <section class="col-span-12 lg:col-span-4">
+      <div class="brand-card rounded-3xl p-6 border border-edge shadow-glow flex flex-col items-center gap-4">
+        <div class="relative w-64 h-64">
+          <svg id="nanoGauge" viewBox="0 0 256 256" class="absolute inset-0">
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0%" stop-color="#FF8BA7"/>
+                <stop offset="100%" stop-color="#C6487F"/>
+              </linearGradient>
+              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+              <radialGradient id="fillGrad" cx="50%" cy="50%" r="60%">
+                <stop offset="0%" stop-color="#FFB3C1" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="#C6487F" stop-opacity="0.10"/>
+              </radialGradient>
+            </defs>
+            <!-- Soft rotating nonagon -->
+            <g id="nanoGroup" class="nano-spin">
+              <path id="gaugeFill" d="" fill="url(#fillGrad)" opacity="0.9"/>
+              <path id="gaugeOutline" d="" fill="none" stroke="url(#gaugeGrad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+            </g>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div id="score" class="text-7xl font-extrabold text-mint drop-shadow">89</div>
+          </div>
+        </div>
+        <div class="text-center">
+          <div id="statusHead" class="text-mint font-semibold">Steady and Responsive</div>
+          <div id="statusSub" class="text-slate-300 text-sm max-w-xs">A prompt, rock‑solid connection keeps things running smoothly.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: cards stack -->
+    <section class="col-span-12 lg:col-span-8 space-y-6">
+      <!-- Top Throughput summary -->
+      <div class="brand-card rounded-3xl p-6 border border-edge">
+        <div class="flex items-center justify-between">
+          <div class="text-lg font-semibold">Throughput <span class="badge">Live</span></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-slate-300">Download</div>
+              <div class="badge">Mbps</div>
+            </div>
+            <div class="text-3xl font-bold"><span id="dlTopNow">230</span> <span class="text-base font-medium">Mbps</span></div>
+            <div id="chartDownTop" class="h-16 mt-2"></div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-slate-300">Upload</div>
+              <div class="badge">Mbps</div>
+            </div>
+            <div class="text-3xl font-bold"><span id="ulTopNow">22</span> <span class="text-base font-medium">Mbps</span></div>
+            <div id="chartUpTop" class="h-16 mt-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Responsiveness -->
+      <div class="brand-card rounded-3xl p-6 border border-edge">
+        <div class="flex items-center justify-between">
+          <div class="text-lg font-semibold">Responsiveness <span class="badge">RTT • Jitter</span></div>
+          <div class="kbd" id="respScore">85</div>
+        </div>
+        <div class="h-28 mt-4" id="chartRTT"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <!-- Lag to router card -->
+          <div id="cardLagRouter" role="region" class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm text-slate-300">Lag to router <span class="badge">RTT (LAN)</span></div>
+                <div class="text-2xl font-bold" id="rttRouter">72 ms</div>
+              </div>
+              <button class="btn-manage px-3 py-1.5 rounded-lg border border-edge hover:bg-white/10 text-sm">Manage</button>
+            </div>
+            <!-- Summary chips (always visible) -->
+            <div class="mt-3 grid grid-cols-3 gap-3 text-sm" id="chipsRouter">
+              <div class="chip"><span class="text-slate-300">Avg</span><span id="rAvg">50 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Best</span><span id="rBest">12 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Worst</span><span id="rWorst">183 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Latency</span><span id="rLat">33 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Jitter (σ)</span><span id="rJit">9 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Loss</span><span id="rLoss">0.5 %</span></div>
+            </div>
+            <!-- Inline manage panel (hidden until Manage is clicked) -->
+            <div id="panelRouter" class="mt-4 hidden">
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <label class="text-slate-300">Smoothing
+                  <select class="mt-1 w-full bg-white/5 border border-edge rounded-lg px-2 py-1 text-sm">
+                    <option>30 s</option><option selected>60 s</option><option>5 min</option>
+                  </select>
+                </label>
+                <label class="text-slate-300">Alert over (ms)
+                  <input type="number" value="120" class="mt-1 w-full bg-white/5 border border-edge rounded-lg px-2 py-1 text-sm" />
+                </label>
+                <label class="text-slate-300 inline-flex items-center gap-2 col-span-2"><input type="checkbox" class="accent-cyan" checked/> Measure under load</label>
+                <label class="text-slate-300">Sampling rate
+                  <select class="mt-1 w-full bg-white/5 border border-edge rounded-lg px-2 py-1 text-sm">
+                    <option>1 Hz</option><option selected>2 Hz</option><option>5 Hz</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lag to internet card -->
+          <div id="cardLagInternet" role="region" class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm text-slate-300">Lag to internet <span class="badge">RTT (WAN)</span></div>
+                <div class="text-2xl font-bold" id="rttInternet">53 ms</div>
+              </div>
+              <button class="btn-manage px-3 py-1.5 rounded-lg border border-edge hover:bg-white/10 text-sm">Manage</button>
+            </div>
+            <!-- Summary chips (always visible) -->
+            <div class="mt-3 grid grid-cols-3 gap-3 text-sm" id="chipsInternet">
+              <div class="chip"><span class="text-slate-300">Avg</span><span id="iAvg">62 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Best</span><span id="iBest">29 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Worst</span><span id="iWorst">139 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Latency</span><span id="iLat">33 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Jitter (σ)</span><span id="iJit">9 ms</span></div>
+              <div class="chip"><span class="text-slate-300">Loss</span><span id="iLoss">0.5 %</span></div>
+            </div>
+            <!-- Inline manage panel (hidden until Manage is clicked) -->
+            <div id="panelInternet" class="mt-4 hidden">
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <label class="text-slate-300">Smoothing
+                  <select class="mt-1 w-full bg-white/5 border border-edge rounded-lg px-2 py-1 text-sm">
+                    <option>30 s</option><option selected>60 s</option><option>5 min</option>
+                  </select>
+                </label>
+                <label class="text-slate-300">Alert over (ms)
+                  <input type="number" value="150" class="mt-1 w-full bg-white/5 border border-edge rounded-lg px-2 py-1 text-sm" />
+                </label>
+                <label class="text-slate-300 inline-flex items-center gap-2 col-span-2"><input type="checkbox" class="accent-cyan" checked/> Measure under load</label>
+                <label class="text-slate-300">Sampling rate
+                  <select class="mt-1 w-full bg-white/5 border border-edge rounded-lg px-2 py-1 text-sm">
+                    <option>1 Hz</option><option selected>2 Hz</option><option>5 Hz</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div class="chip"><span class="text-slate-300 text-sm">TTFB</span><span id="ttfb" class="font-semibold">388 ms</span></div>
+          <div class="chip"><span class="text-slate-300 text-sm">DNS resolve</span><span id="dns" class="font-semibold">244 ms</span></div>
+          <div class="chip"><span class="text-slate-300 text-sm">Trend</span><span id="trend" class="font-semibold">Stable</span></div>
+        </div>
+      </div>
+
+      <!-- Reliability (Availability) --> (Availability) -->
+      <div class="brand-card rounded-3xl p-6 border border-edge">
+        <div class="flex items-center justify-between">
+          <div class="text-lg font-semibold">Reliability <span class="badge">Availability • Loss</span></div>
+          <div class="kbd" id="relScore">100</div>
+        </div>
+        <div class="mt-3 h-3 rounded-full bg-white/10 overflow-hidden">
+          <div id="relBar" class="h-3" style="background-image: linear-gradient(90deg,#FF8BA7,#FFB3C1); width: 100%"></div>
+        </div>
+        <div class="grid grid-cols-4 gap-3 mt-4 text-sm text-center">
+          <div class="bg-white/5 border border-edge rounded-xl p-3">
+            <div class="text-mint font-semibold">Responsive</div>
+            <div id="relOk">100%</div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-xl p-3">
+            <div class="text-amber font-semibold">Laggy</div>
+            <div id="relLag">0%</div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-xl p-3">
+            <div class="text-danger font-semibold">Unresponsive</div>
+            <div id="relBad">0%</div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-xl p-3">
+            <div class="text-slate-300 font-semibold">Inactive</div>
+            <div id="relIdle">0%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Speed (Content & Peak) -->
+      <div class="brand-card rounded-3xl p-6 border border-edge">
+        <div class="flex items-center justify-between">
+          <div class="text-lg font-semibold">Speed <span class="badge">Content • Peak</span></div>
+          <div class="kbd" id="speedScore">93</div>
+        </div>
+        <div class="mt-3">
+          <button class="w-full rounded-xl border border-edge py-2 bg-magenta/25 hover:bg-magenta/30">Check content speed</button>
+        </div>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="text-sm text-slate-300">Download</div>
+            <div id="downNow" class="text-3xl font-bold">147 <span class="text-base font-medium">Mbps</span></div>
+            <div class="text-xs text-slate-400">Avg: <span id="downAvg">147</span> • Best: <span id="downBest">147</span> • Worst: <span id="downWorst">147</span></div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="text-sm text-slate-300">Upload</div>
+            <div id="upNow" class="text-3xl font-bold">75 <span class="text-base font-medium">Mbps</span></div>
+            <div class="text-xs text-slate-400">Avg: <span id="upAvg">75</span> • Best: <span id="upBest">75</span> • Worst: <span id="upWorst">75</span></div>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="text-sm text-slate-300 mb-2">Peak speed</div>
+          <button class="w-full rounded-xl border border-edge py-2 hover:bg-white/10">Test peak speed</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Intelligence & Tools -->
+    <section class="col-span-12 space-y-6">
+      <div class="brand-card rounded-3xl p-6 border border-edge">
+        <div class="text-lg font-semibold mb-4">Network Intelligence</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="text-sm text-slate-300">Public IP</div>
+            <div id="ip" class="text-xl font-semibold">203.0.113.42</div>
+            <div id="ipGeo" class="text-xs text-slate-400">Lahore • PK • AS13335 Cloudflare</div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="text-sm text-slate-300">NAT</div>
+            <div id="natType" class="text-xl font-semibold">Symmetric NAT</div>
+            <div class="text-xs text-slate-400">Status: <span id="natDepth" class="good">Single NAT</span></div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="text-sm text-slate-300">Wi‑Fi signal</div>
+            <div class="text-xl font-semibold"><span id="wifiDbm">-45</span> dBm</div>
+            <div id="wifiVerdict" class="text-xs good">Excellent</div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="text-sm text-slate-300">LAN</div>
+            <div id="lan" class="text-xl font-semibold">Ethernet — Gigabit</div>
+            <div class="text-xs text-slate-400">(If unavailable, this box will hide)</div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="text-sm text-slate-300">DNS lag</div>
+            <div id="dnsLag" class="text-xl font-semibold">24 ms</div>
+            <div class="text-xs text-slate-400">Resolver: 1.1.1.1</div>
+          </div>
+          <div class="bg-white/5 border border-edge rounded-2xl p-4">
+            <div class="text-sm text-slate-300">Ports in use</div>
+            <div id="ports" class="mt-1 flex flex-wrap gap-1">
+              <span class="kbd">443</span><span class="kbd">53</span><span class="kbd">3478</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ping tools -->
+      <div class="brand-card rounded-3xl p-6 border border-edge">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-lg font-semibold">Ping Center</div>
+          <div class="text-xs text-slate-400">Quick checks + custom</div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+          <button class="chip hover:bg-white/10" data-host="1.1.1.1">Cloudflare <span class="kbd">1.1.1.1</span></button>
+          <button class="chip hover:bg-white/10" data-host="8.8.8.8">Google <span class="kbd">8.8.8.8</span></button>
+          <button class="chip hover:bg-white/10" data-host="amazon.com">AWS <span class="kbd">amazon.com</span></button>
+          <button class="chip hover:bg-white/10" data-host="steampowered.com">Steam <span class="kbd">steampowered.com</span></button>
+          <button class="chip hover:bg-white/10" data-host="netflix.com">Netflix <span class="kbd">netflix.com</span></button>
+          <button class="chip hover:bg-white/10" data-host="openai.com">OpenAI <span class="kbd">openai.com</span></button>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2 mt-4">
+          <input id="customHost" placeholder="Host or IP" class="flex-1 bg-white/5 border border-edge rounded-xl px-3 py-2 outline-none" />
+          <button id="btnPing" class="px-4 py-2 rounded-xl border border-edge hover:bg-white/10">Ping</button>
+        </div>
+        <div class="h-36 mt-4" id="chartPing"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Frontend‑only demo wiring (stub values). Replace with real backend later. -->
+  <script>
+    // Theme colors for charts (Maroon palette)
+    const THEME = { rose:'#FF8BA7', blush:'#FFB3C1', plum:'#C6487F', peach:'#FFD59E', grid:'rgba(255,255,255,0.08)', text:'#f1f5f9' };
+    const $ = (s) => document.querySelector(s);
+    const clamp = (n,min,max)=>Math.min(max,Math.max(min,n));
+
+    // Build a rounded nonagon (9-gon) path centered in the 256x256 viewBox
+    function buildRoundedNonagonPath(sides=9, R=95, corner=26, cx=128, cy=128){
+      // Corner radius larger => softer corners. Uses circular arcs between edge points.
+      const rot = -Math.PI/2; // start at top
+      const verts = Array.from({length:sides}, (_,i)=>{
+        const a = rot + i*2*Math.PI/sides; return [cx + R*Math.cos(a), cy + R*Math.sin(a)];
+      });
+      const interior = (sides-2)*Math.PI/sides; // interior angle of regular polygon
+      const offset = corner / Math.tan(interior/2); // distance from vertex to arc start along each edge
+      const path = [];
+      for(let i=0;i<sides;i++){
+        const vPrev = verts[(i-1+sides)%sides], v = verts[i], vNext = verts[(i+1)%sides];
+        const dirPrev = [v[0]-vPrev[0], v[1]-vPrev[1]]; const lenPrev = Math.hypot(...dirPrev); const nPrev=[dirPrev[0]/lenPrev, dirPrev[1]/lenPrev];
+        const dirNext = [vNext[0]-v[0], vNext[1]-v[1]]; const lenNext = Math.hypot(...dirNext); const nNext=[dirNext[0]/lenNext, dirNext[1]/lenNext];
+        const d = Math.min(offset, lenPrev*0.49, lenNext*0.49); // guard for small edges
+        const p1 = [v[0]-nPrev[0]*d, v[1]-nPrev[1]*d]; // end of previous edge
+        const p2 = [v[0]+nNext[0]*d, v[1]+nNext[1]*d]; // start of next edge
+        if(i===0){ path.push(`M ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`); }
+        else      { path.push(`L ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`); }
+        // Rounded corner as arc from p1 to p2
+        path.push(`A ${corner} ${corner} 0 0 1 ${p2[0].toFixed(3)} ${p2[1].toFixed(3)}`);
+      }
+      path.push('Z');
+      return path.join(' ');
+    }
+    function initGaugeShape(){
+      const d = buildRoundedNonagonPath(9, 95, 28, 128, 128); // extra‑soft corners
+      const fill = document.getElementById('gaugeFill');
+      const outline  = document.getElementById('gaugeOutline');
+      if(fill&&outline){ fill.setAttribute('d', d); outline.setAttribute('d', d); }
+    }
+    function setScore(val){ val = clamp(val, 0, 100); $('#score').textContent = val; }
+
+    function wifiVerdict(dbm){ if(dbm >= -55) return ['Excellent','good']; if(dbm >= -65) return ['Good','good']; if(dbm >= -75) return ['Average','warn']; return ['Weak','bad']; }
+
+    const chartRTT = echarts.init(document.getElementById('chartRTT'));
+    const rttData = Array.from({length:120}, (_,i)=> 40 + Math.round(Math.sin(i/6)*8 + Math.random()*6));
+    chartRTT.setOption({
+      grid:{left:6,right:6,top:6,bottom:0},
+      xAxis:{type:'category',show:false,data:rttData.map((_,i)=>i)},
+      yAxis:{type:'value',show:false},
+      series:[{
+        type:'line',
+        data:rttData,
+        smooth:true,
+        symbol:'none',
+        lineStyle:{width:3,color:THEME.rose,shadowBlur:12,shadowColor:'rgba(255,139,167,.85)'},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+          {offset:0,color:'rgba(255,139,167,.32)'},
+          {offset:.6,color:'rgba(198,72,127,.18)'},
+          {offset:1,color:'rgba(198,72,127,0)'}
+        ])}
+      }]
+    });
+
+    const chartPing = echarts.init(document.getElementById('chartPing'));
+    chartPing.setOption({
+      grid:{left:6,right:6,top:6,bottom:20},
+      xAxis:{type:'category',data:[],axisLine:{lineStyle:{color:THEME.grid}},axisLabel:{color:THEME.text}},
+      yAxis:{type:'value',axisLabel:{color:THEME.text},splitLine:{lineStyle:{color:THEME.grid}}},
+      series:[{
+        type:'line',
+        data:[],
+        smooth:true,
+        symbolSize:6,
+        lineStyle:{width:3,color:THEME.rose,shadowBlur:12,shadowColor:'rgba(255,139,167,.85)'},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+          {offset:0,color:'rgba(255,139,167,.32)'},
+          {offset:.6,color:'rgba(198,72,127,.18)'},
+          {offset:1,color:'rgba(198,72,127,0)'}
+        ])}
+      }]
+    });
+
+    document.querySelectorAll('[data-host]').forEach(btn=>{
+      btn.addEventListener('click',()=> runDemoPing(btn.getAttribute('data-host')));
+    });
+    $('#btnPing').addEventListener('click',()=> runDemoPing($('#customHost').value||'1.1.1.1'));
+
+    function runDemoPing(host){
+      const xs = []; const ys = []; const n = 20; let t = 0; const base = 25 + Math.random()*40;
+      const timer = setInterval(()=>{ t++; const jitter = (Math.random()-0.5)*10; const val = Math.max(1, Math.round(base + jitter)); xs.push(t); ys.push(val); chartPing.setOption({xAxis:{data:xs}, series:[{data:ys}]}); if(t>=n) clearInterval(timer); }, 180);
+    }
+
+    const chartDownTop = echarts.init(document.getElementById('chartDownTop'));
+    const chartUpTop   = echarts.init(document.getElementById('chartUpTop'));
+    function randSeries(n, base, jitter){ const a=[]; let v=base; for(let i=0;i<n;i++){ v = Math.max(1, v + (Math.random()-0.5)*jitter); a.push(Math.round(v)); } return a; }
+    function updateThroughput(){
+      const dl = randSeries(40, 220, 25); const ul = randSeries(40, 18, 5);
+      chartDownTop.setOption({
+        xAxis:{type:'category',show:false,data:dl.map((_,i)=>i)},
+        yAxis:{type:'value',show:false},
+        series:[{
+          type:'line',
+          data:dl,
+          smooth:true,
+          symbol:'none',
+          lineStyle:{width:3,color:THEME.rose,shadowBlur:10,shadowColor:'rgba(255,139,167,.8)'},
+          areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+            {offset:0,color:'rgba(255,139,167,.30)'},
+            {offset:.6,color:'rgba(198,72,127,.18)'},
+            {offset:1,color:'rgba(198,72,127,0)'}
+          ])}
+        }]
+      });
+      chartUpTop.setOption({
+        xAxis:{type:'category',show:false,data:ul.map((_,i)=>i)},
+        yAxis:{type:'value',show:false},
+        series:[{
+          type:'line',
+          data:ul,
+          smooth:true,
+          symbol:'none',
+          lineStyle:{width:3,color:THEME.rose,shadowBlur:10,shadowColor:'rgba(255,139,167,.8)'},
+          areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+            {offset:0,color:'rgba(255,139,167,.30)'},
+            {offset:.6,color:'rgba(198,72,127,.18)'},
+            {offset:1,color:'rgba(198,72,127,0)'}
+          ])}
+        }]
+      });
+      $('#dlTopNow').textContent = dl[dl.length-1];
+      $('#ulTopNow').textContent = ul[ul.length-1];
+    }
+    updateThroughput();
+
+    // populate demo verdict
+    const dbm = -45; $('#wifiDbm').textContent = dbm; const [label, cls] = wifiVerdict(dbm); const verdict = $('#wifiVerdict'); verdict.textContent = label; verdict.className = 'text-xs '+cls; initGaugeShape();
+    setScore(89);
+
+    window.addEventListener('resize', ()=>{ chartRTT.resize(); chartPing.resize(); chartDownTop.resize(); chartUpTop.resize(); });
+
+    // Inline manage panels (no modal)
+    function wireInlineLag(cardSel, panelSel){
+      const btn = document.querySelector(cardSel+' .btn-manage');
+      const panel = document.querySelector(panelSel);
+      if(!btn || !panel) return;
+      btn.addEventListener('click', (e)=>{ e.stopPropagation(); panel.classList.toggle('hidden'); });
+    }
+    wireInlineLag('#cardLagRouter','#panelRouter');
+    wireInlineLag('#cardLagInternet','#panelInternet');
+
+  </script>
+
+</body>
+</html>

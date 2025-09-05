@@ -1,3 +1,13 @@
+// Theme colors for charts (Maroon palette)
+const THEME = { 
+  rose:'#FF8BA7', 
+  blush:'#FFB3C1', 
+  plum:'#C6487F', 
+  peach:'#FFD59E', 
+  grid:'rgba(255,255,255,0.08)', 
+  text:'#f1f5f9' 
+};
+
 class PingWiseDashboard {
     constructor() {
         this.socket = null;
@@ -10,55 +20,11 @@ class PingWiseDashboard {
     }
     
     init() {
+        this.initializeGauge();
         this.initializeSocket();
         this.initializeCharts();
         this.initializeEventListeners();
-        this.initializeGauge();
-        this.createConnectionIndicator();
         this.loadInitialData();
-    }
-    
-    createConnectionIndicator() {
-        const indicator = document.createElement('div');
-        indicator.id = 'connectionStatus';
-        indicator.className = 'connection-status connecting';
-        indicator.textContent = 'Connecting...';
-        document.body.appendChild(indicator);
-    }
-    
-    updateConnectionStatus(status) {
-        const indicator = document.getElementById('connectionStatus');
-        if (!indicator) return;
-        
-        this.connectionStatus = status;
-        indicator.className = `connection-status ${status}`;
-        
-        switch(status) {
-            case 'connected':
-                indicator.textContent = 'Connected';
-                break;
-            case 'disconnected':
-                indicator.textContent = 'Disconnected';
-                break;
-            case 'connecting':
-                indicator.textContent = 'Connecting...';
-                break;
-        }
-        
-        // Auto-hide after 3 seconds if connected
-        if (status === 'connected') {
-            setTimeout(() => {
-                indicator.style.opacity = '0';
-                setTimeout(() => {
-                    if (indicator.style.opacity === '0') {
-                        indicator.style.display = 'none';
-                    }
-                }, 300);
-            }, 3000);
-        } else {
-            indicator.style.display = 'block';
-            indicator.style.opacity = '1';
-        }
     }
     
     initializeSocket() {
@@ -66,13 +32,11 @@ class PingWiseDashboard {
         
         this.socket.on('connect', () => {
             console.log('Connected to server');
-            this.updateConnectionStatus('connected');
             this.socket.emit('subscribe_updates');
         });
         
         this.socket.on('disconnect', () => {
             console.log('Disconnected from server');
-            this.updateConnectionStatus('disconnected');
         });
         
         this.socket.on('network_update', (data) => {
@@ -81,11 +45,6 @@ class PingWiseDashboard {
         
         this.socket.on('historical_data', (data) => {
             this.updateCharts(data);
-        });
-        
-        this.socket.on('connect_error', (error) => {
-            console.error('Connection error:', error);
-            this.updateConnectionStatus('disconnected');
         });
         
         this.socket.on('subscribed', (data) => {
@@ -120,13 +79,25 @@ class PingWiseDashboard {
             });
         });
         
-        // Start button
-        const startButton = document.querySelector('.btn-aurora');
-        if (startButton) {
-            startButton.addEventListener('click', () => {
-                this.startMonitoring();
+        // Ping buttons
+        document.querySelectorAll('[data-host]').forEach(btn => {
+            btn.addEventListener('click', () => this.runDemoPing(btn.getAttribute('data-host')));
+        });
+        
+        const btnPing = document.getElementById('btnPing');
+        if (btnPing) {
+            btnPing.addEventListener('click', () => {
+                const customHost = document.getElementById('customHost');
+                this.runDemoPing(customHost ? customHost.value || '1.1.1.1' : '1.1.1.1');
             });
         }
+        
+        // Window resize
+        window.addEventListener('resize', () => {
+            Object.values(this.charts).forEach(chart => {
+                if (chart) chart.resize();
+            });
+        });
     }
     
     changeTimeRange(range) {
@@ -164,8 +135,6 @@ class PingWiseDashboard {
         if (this.socket && this.socket.connected) {
             this.socket.emit('change_server', { server: server });
         }
-        
-        console.log(`Server changed to: ${server}`);
     }
     
     toggleManagePanel(card) {
@@ -175,25 +144,6 @@ class PingWiseDashboard {
         
         if (panel) {
             panel.classList.toggle('hidden');
-            panel.classList.toggle('panel-transition');
-            panel.classList.toggle('open');
-        }
-    }
-    
-    startMonitoring() {
-        console.log('Starting network monitoring...');
-        // In a real implementation, this would trigger the monitoring process
-        // For now, we'll just show a message
-        const button = document.querySelector('.btn-aurora');
-        if (button) {
-            const originalText = button.textContent;
-            button.textContent = 'Running...';
-            button.disabled = true;
-            
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.disabled = false;
-            }, 2000);
         }
     }
     
@@ -219,12 +169,12 @@ class PingWiseDashboard {
             this.setupRTTChart(this.charts.rtt);
         }
         
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            Object.values(this.charts).forEach(chart => {
-                if (chart) chart.resize();
-            });
-        });
+        // Initialize Ping chart
+        const pingChart = document.getElementById('chartPing');
+        if (pingChart) {
+            this.charts.ping = echarts.init(pingChart);
+            this.setupPingChart(this.charts.ping);
+        }
     }
     
     setupThroughputChart(chart, type) {
@@ -250,7 +200,7 @@ class PingWiseDashboard {
                 symbol: 'none',
                 lineStyle: {
                     width: 2,
-                    color: type === 'download' ? '#FF8BA7' : '#FFD59E'
+                    color: type === 'download' ? THEME.rose : THEME.peach
                 },
                 areaStyle: {
                     color: {
@@ -299,8 +249,8 @@ class PingWiseDashboard {
                     smooth: true,
                     symbol: 'circle',
                     symbolSize: 4,
-                    lineStyle: { width: 2, color: '#FF8BA7' },
-                    itemStyle: { color: '#FF8BA7' },
+                    lineStyle: { width: 2, color: THEME.rose },
+                    itemStyle: { color: THEME.rose },
                     data: []
                 },
                 {
@@ -309,8 +259,8 @@ class PingWiseDashboard {
                     smooth: true,
                     symbol: 'circle',
                     symbolSize: 4,
-                    lineStyle: { width: 2, color: '#FFD59E' },
-                    itemStyle: { color: '#FFD59E' },
+                    lineStyle: { width: 2, color: THEME.peach },
+                    itemStyle: { color: THEME.peach },
                     data: []
                 }
             ],
@@ -325,54 +275,110 @@ class PingWiseDashboard {
         chart.setOption(option);
     }
     
-    initializeGauge() {
-        const svg = document.getElementById('nanoGauge');
-        if (!svg) return;
+    setupPingChart(chart) {
+        const option = {
+            grid: {
+                left: 40,
+                right: 20,
+                top: 10,
+                bottom: 30
+            },
+            xAxis: {
+                type: 'category',
+                axisLine: { lineStyle: { color: THEME.grid } },
+                axisLabel: { color: THEME.text, fontSize: 10 },
+                data: []
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: THEME.text, fontSize: 10 },
+                splitLine: { lineStyle: { color: THEME.grid } }
+            },
+            series: [{
+                type: 'line',
+                data: [],
+                smooth: true,
+                symbolSize: 6,
+                lineStyle: { 
+                    width: 3, 
+                    color: THEME.rose, 
+                    shadowBlur: 12, 
+                    shadowColor: 'rgba(255,139,167,.85)' 
+                },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(255,139,167,.32)' },
+                        { offset: .6, color: 'rgba(198,72,127,.18)' },
+                        { offset: 1, color: 'rgba(198,72,127,0)' }
+                    ])
+                }
+            }]
+        };
         
-        // Create hexagonal gauge path
-        this.updateGauge(85); // Initial score
+        chart.setOption(option);
+    }
+    
+    initializeGauge() {
+        // Build a rounded nonagon (9-gon) path
+        function buildRoundedNonagonPath(sides = 9, R = 95, corner = 26, cx = 128, cy = 128) {
+            const rot = -Math.PI / 2; // start at top
+            const verts = Array.from({ length: sides }, (_, i) => {
+                const a = rot + i * 2 * Math.PI / sides;
+                return [cx + R * Math.cos(a), cy + R * Math.sin(a)];
+            });
+            const interior = (sides - 2) * Math.PI / sides;
+            const offset = corner / Math.tan(interior / 2);
+            const path = [];
+            
+            for (let i = 0; i < sides; i++) {
+                const vPrev = verts[(i - 1 + sides) % sides];
+                const v = verts[i];
+                const vNext = verts[(i + 1) % sides];
+                const dirPrev = [v[0] - vPrev[0], v[1] - vPrev[1]];
+                const lenPrev = Math.hypot(...dirPrev);
+                const nPrev = [dirPrev[0] / lenPrev, dirPrev[1] / lenPrev];
+                const dirNext = [vNext[0] - v[0], vNext[1] - v[1]];
+                const lenNext = Math.hypot(...dirNext);
+                const nNext = [dirNext[0] / lenNext, dirNext[1] / lenNext];
+                const d = Math.min(offset, lenPrev * 0.49, lenNext * 0.49);
+                const p1 = [v[0] - nPrev[0] * d, v[1] - nPrev[1] * d];
+                const p2 = [v[0] + nNext[0] * d, v[1] + nNext[1] * d];
+                
+                if (i === 0) {
+                    path.push(`M ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`);
+                } else {
+                    path.push(`L ${p1[0].toFixed(3)} ${p1[1].toFixed(3)}`);
+                }
+                path.push(`A ${corner} ${corner} 0 0 1 ${p2[0].toFixed(3)} ${p2[1].toFixed(3)}`);
+            }
+            path.push('Z');
+            return path.join(' ');
+        }
+        
+        const d = buildRoundedNonagonPath(9, 95, 28, 128, 128);
+        const fill = document.getElementById('gaugeFill');
+        const outline = document.getElementById('gaugeOutline');
+        if (fill && outline) {
+            fill.setAttribute('d', d);
+            outline.setAttribute('d', d);
+        }
+        
+        // Initialize with default score
+        this.updateGauge(85);
     }
     
     updateGauge(score) {
-        const gaugeFill = document.getElementById('gaugeFill');
-        const gaugeOutline = document.getElementById('gaugeOutline');
         const scoreElement = document.getElementById('score');
-        
-        if (!gaugeFill || !gaugeOutline || !scoreElement) return;
-        
-        // Create hexagon path
-        const centerX = 128;
-        const centerY = 128;
-        const radius = 80;
-        const sides = 6;
-        
-        let pathData = '';
-        for (let i = 0; i <= sides; i++) {
-            const angle = (i / sides) * 2 * Math.PI - Math.PI / 2;
-            const x = centerX + radius * Math.cos(angle);
-            const y = centerY + radius * Math.sin(angle);
+        if (scoreElement) {
+            scoreElement.textContent = Math.round(score);
             
-            if (i === 0) {
-                pathData += `M ${x} ${y}`;
-            } else {
-                pathData += ` L ${x} ${y}`;
-            }
-        }
-        pathData += ' Z';
-        
-        gaugeFill.setAttribute('d', pathData);
-        gaugeOutline.setAttribute('d', pathData);
-        scoreElement.textContent = score;
-        
-        // Update color based on score
-        const scoreElement2 = document.getElementById('score');
-        if (scoreElement2) {
+            // Update color based on score
             if (score >= 80) {
-                scoreElement2.className = 'text-7xl font-extrabold text-mint drop-shadow';
+                scoreElement.className = 'text-7xl font-extrabold text-mint drop-shadow';
             } else if (score >= 60) {
-                scoreElement2.className = 'text-7xl font-extrabold text-amber drop-shadow';
+                scoreElement.className = 'text-7xl font-extrabold text-amber drop-shadow';
             } else {
-                scoreElement2.className = 'text-7xl font-extrabold text-danger drop-shadow';
+                scoreElement.className = 'text-7xl font-extrabold text-danger drop-shadow';
             }
         }
     }
@@ -418,6 +424,19 @@ class PingWiseDashboard {
             respScore.textContent = Math.round(responsiveness);
         }
         
+        // Update TTFB, DNS, and trend
+        const ttfb = document.getElementById('ttfb');
+        const dns = document.getElementById('dns');
+        if (ttfb) ttfb.textContent = `${Math.round(data.router_rtt * 5)} ms`;
+        if (dns) dns.textContent = `${Math.round(data.router_rtt * 3)} ms`;
+        
+        // Update reliability bar
+        const relBar = document.getElementById('relBar');
+        if (relBar) {
+            const reliability = Math.max(0, 100 - data.packet_loss * 20);
+            relBar.style.width = `${reliability}%`;
+        }
+        
         // Update detailed metrics
         this.updateDetailedMetrics(data);
         
@@ -441,12 +460,32 @@ class PingWiseDashboard {
             'iWorst': `${Math.round(data.internet_rtt * 1.3)} ms`,
             'iLat': `${Math.round(data.internet_rtt * 0.9)} ms`,
             'iJit': `${Math.round(data.jitter * 1.2)} ms`,
-            'iLoss': `${(data.packet_loss * 0.8).toFixed(1)} %`
+            'iLoss': `${(data.packet_loss * 0.8).toFixed(1)} %`,
+            
+            // Speed metrics
+            'downNow': `${Math.round(data.download_speed)}`,
+            'downAvg': `${Math.round(data.download_speed * 0.95)}`,
+            'downBest': `${Math.round(data.download_speed * 1.1)}`,
+            'downWorst': `${Math.round(data.download_speed * 0.8)}`,
+            'upNow': `${Math.round(data.upload_speed)}`,
+            'upAvg': `${Math.round(data.upload_speed * 0.95)}`,
+            'upBest': `${Math.round(data.upload_speed * 1.1)}`,
+            'upWorst': `${Math.round(data.upload_speed * 0.8)}`,
+            
+            // Network intelligence
+            'dnsLag': `${Math.round(data.router_rtt / 2)} ms`,
+            'wifiDbm': `-${45 + Math.round(data.jitter / 2)}`
         };
         
         Object.entries(elements).forEach(([id, value]) => {
             const element = document.getElementById(id);
-            if (element) element.textContent = value;
+            if (element) {
+                if (element.tagName === 'SPAN') {
+                    element.textContent = value;
+                } else {
+                    element.textContent = `${value}`;
+                }
+            }
         });
     }
     
@@ -519,6 +558,30 @@ class PingWiseDashboard {
                 ]
             });
         }
+    }
+    
+    runDemoPing(host) {
+        if (!this.charts.ping) return;
+        
+        const xs = [];
+        const ys = [];
+        let t = 0;
+        const base = 25 + Math.random() * 40;
+        
+        const timer = setInterval(() => {
+            t++;
+            const jitter = (Math.random() - 0.5) * 10;
+            const val = Math.max(1, Math.round(base + jitter));
+            xs.push(t);
+            ys.push(val);
+            
+            this.charts.ping.setOption({
+                xAxis: { data: xs },
+                series: [{ data: ys }]
+            });
+            
+            if (t >= 20) clearInterval(timer);
+        }, 180);
     }
     
     loadInitialData() {
