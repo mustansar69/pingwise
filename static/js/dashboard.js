@@ -475,23 +475,8 @@ class PingWiseDashboard {
         );
         this.updateGauge(overallScore);
         
-        // Update status text
-        const statusHead = document.getElementById('statusHead');
-        const statusSub = document.getElementById('statusSub');
-        
-        if (overallScore >= 80) {
-            if (statusHead) statusHead.textContent = 'Excellent Performance';
-            if (statusSub) statusSub.textContent = 'Your connection is performing exceptionally well with fast speeds and low latency.';
-        } else if (overallScore >= 60) {
-            if (statusHead) statusHead.textContent = 'Good Performance';
-            if (statusSub) statusSub.textContent = 'Your connection is working well with minor fluctuations in performance.';
-        } else if (overallScore >= 40) {
-            if (statusHead) statusHead.textContent = 'Fair Performance';
-            if (statusSub) statusSub.textContent = 'Your connection has some performance issues that may affect usage.';
-        } else {
-            if (statusHead) statusHead.textContent = 'Poor Performance';
-            if (statusSub) statusSub.textContent = 'Your connection is experiencing significant problems.';
-        }
+        // Apply lag-based coloring and status updates
+        this.updateLagColors(data);
         
         // Update throughput displays
         const dlTopNow = document.getElementById('dlTopNow');
@@ -750,6 +735,128 @@ class PingWiseDashboard {
                     { data: routerRTTs },
                     { data: internetRTTs }
                 ]
+            });
+        }
+    }
+    
+    getLagState(latency) {
+        if (latency <= 20) return 'excellent';  // Green - Excellent (0-20ms)
+        if (latency <= 50) return 'good';       // Light pink - Good (21-50ms) 
+        if (latency <= 100) return 'moderate';  // Yellow - Moderate lag (51-100ms)
+        if (latency <= 200) return 'poor';      // Orange-pink - Poor (101-200ms)
+        return 'terrible';                      // Red - Terrible (200ms+)
+    }
+    
+    updateLagColors(data) {
+        // Get lag states for both router and internet
+        const routerLagState = this.getLagState(data.router_rtt);
+        const internetLagState = this.getLagState(data.internet_rtt);
+        
+        // Update router lag card colors
+        const routerCard = document.getElementById('cardLagRouter');
+        const routerValue = document.getElementById('rttRouter');
+        if (routerCard && routerValue) {
+            // Remove existing lag classes
+            routerCard.className = routerCard.className.replace(/\blag-\w+\b/g, '');
+            routerValue.className = routerValue.className.replace(/\blag-\w+\b/g, '');
+            
+            // Add new lag class
+            routerCard.classList.add(`lag-${routerLagState}`);
+            routerValue.classList.add(`lag-${routerLagState}`);
+        }
+        
+        // Update internet lag card colors  
+        const internetCard = document.getElementById('cardLagInternet');
+        const internetValue = document.getElementById('rttInternet');
+        if (internetCard && internetValue) {
+            // Remove existing lag classes
+            internetCard.className = internetCard.className.replace(/\blag-\w+\b/g, '');
+            internetValue.className = internetValue.className.replace(/\blag-\w+\b/g, '');
+            
+            // Add new lag class
+            internetCard.classList.add(`lag-${internetLagState}`);
+            internetValue.classList.add(`lag-${internetLagState}`);
+        }
+        
+        // Update main status message based on worst lag
+        const worstLagState = data.router_rtt > data.internet_rtt ? routerLagState : internetLagState;
+        this.updateStatusMessage(worstLagState);
+        
+        // Update reliability status indicators
+        this.updateReliabilityPercentages(routerLagState, internetLagState);
+    }
+    
+    updateStatusMessage(lagState) {
+        const statusHead = document.getElementById('statusHead');
+        const statusSub = document.getElementById('statusSub');
+        
+        if (statusHead && statusSub) {
+            switch(lagState) {
+                case 'excellent':
+                    statusHead.textContent = 'Lightning Fast';
+                    statusSub.textContent = 'Exceptional performance with ultra-low latency for real-time applications.';
+                    break;
+                case 'good':
+                    statusHead.textContent = 'Steady and Responsive';
+                    statusSub.textContent = 'A prompt, rock-solid connection keeps things running smoothly.';
+                    break;
+                case 'moderate':
+                    statusHead.textContent = 'Slightly Laggy';
+                    statusSub.textContent = 'Minor delays may be noticeable during real-time activities.';
+                    break;
+                case 'poor':
+                    statusHead.textContent = 'Laggy Connection';
+                    statusSub.textContent = 'Significant delays affecting user experience and responsiveness.';
+                    break;
+                case 'terrible':
+                    statusHead.textContent = 'Very Laggy';
+                    statusSub.textContent = 'Severe delays making real-time applications nearly unusable.';
+                    break;
+            }
+        }
+    }
+    
+    updateReliabilityPercentages(routerLagState, internetLagState) {
+        // Calculate percentages based on lag states
+        const stateToPercentage = {
+            'excellent': 100,
+            'good': 95,
+            'moderate': 70,
+            'poor': 40,
+            'terrible': 10
+        };
+        
+        const responsivePercent = Math.min(
+            stateToPercentage[routerLagState] || 50,
+            stateToPercentage[internetLagState] || 50
+        );
+        
+        const laggyPercent = Math.max(0, Math.min(30, 100 - responsivePercent));
+        const unresponsivePercent = Math.max(0, Math.min(15, 100 - responsivePercent - laggyPercent));
+        const inactivePercent = Math.max(0, 100 - responsivePercent - laggyPercent - unresponsivePercent);
+        
+        // Find and update reliability status elements
+        const reliabilitySection = document.querySelector('[data-section="reliability"]');
+        if (reliabilitySection) {
+            const statusCards = reliabilitySection.querySelectorAll('.chip');
+            statusCards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                const percentElement = card.querySelector('.text-2xl, .font-bold');
+                if (percentElement) {
+                    if (text.includes('responsive')) {
+                        percentElement.textContent = `${responsivePercent}%`;
+                        card.style.color = responsivePercent >= 80 ? '#10B981' : responsivePercent >= 60 ? '#FFB3C1' : '#FF6C8F';
+                    } else if (text.includes('laggy')) {
+                        percentElement.textContent = `${laggyPercent}%`;
+                        card.style.color = laggyPercent <= 10 ? '#10B981' : laggyPercent <= 25 ? '#FFD59E' : '#FF6C8F';
+                    } else if (text.includes('unresponsive')) {
+                        percentElement.textContent = `${unresponsivePercent}%`;
+                        card.style.color = unresponsivePercent <= 5 ? '#10B981' : unresponsivePercent <= 15 ? '#FFD59E' : '#FF6C8F';
+                    } else if (text.includes('inactive')) {
+                        percentElement.textContent = `${inactivePercent}%`;
+                        card.style.color = inactivePercent <= 2 ? '#10B981' : inactivePercent <= 10 ? '#FFD59E' : '#FF6C8F';
+                    }
+                }
             });
         }
     }
