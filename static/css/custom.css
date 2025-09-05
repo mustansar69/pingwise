@@ -1,0 +1,213 @@
+/* Custom CSS for Ping Wise Dashboard - Exact recreation of maroon theme */
+
+/* Base chip, badge, and pill styles */
+.chip { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: .6rem .8rem; 
+    background: rgba(255,255,255,.06); 
+    border: 1px solid rgba(255,255,255,.14); 
+    border-radius: .85rem; 
+    backdrop-filter: blur(2px); 
+}
+
+.kbd { 
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+    font-size: .75rem; 
+    padding: .25rem .5rem; 
+    border-radius: .5rem; 
+    background: rgba(255,255,255,.10); 
+    border: 1px solid rgba(255,255,255,.18); 
+}
+
+.pill { 
+    padding: .35rem .7rem; 
+    border-radius: 9999px; 
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pill.active {
+    background: rgba(255,255,255,.10);
+}
+
+.pill:hover {
+    background: rgba(255,255,255,.10);
+}
+
+/* Status colors */
+.good { color: #FFB3C1; } 
+.warn { color: #FFD59E; } 
+.bad { color: #FF6C8F; }
+
+.badge { 
+    font-size: .7rem; 
+    padding: .15rem .45rem; 
+    border-radius: .6rem; 
+    border: 1px solid rgba(255,255,255,.18); 
+    background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06)); 
+}
+
+/* Brand identity — Maroon theme */
+body {
+    background:
+        radial-gradient(1200px 800px at 0% 0%, rgba(198,72,127,.16), transparent 45%),
+        radial-gradient(900px 600px at 100% 5%, rgba(255,139,167,.10), transparent 50%),
+        radial-gradient(900px 600px at 50% 100%, rgba(255,213,158,.08), transparent 55%),
+        #0b0608;
+}
+
+.brand-card {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
+        radial-gradient(120% 120% at 0% 0%, rgba(255,139,167,0.08), transparent 60%),
+        radial-gradient(120% 120% at 100% 0%, rgba(198,72,127,0.08), transparent 60%),
+        #15090e;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 12px 44px rgba(198,72,127,.18);
+}
+
+.btn-aurora { 
+    background-image: linear-gradient(90deg, #FF8BA7, #FFD59E); 
+    color: #2a0f15; 
+    font-weight: 600; 
+    border: 0; 
+    box-shadow: 0 8px 24px rgba(255,139,167,.30);
+    transition: all 0.2s ease;
+}
+
+.btn-aurora:hover { 
+    filter: brightness(1.06); 
+    transform: translateY(-1px);
+}
+
+/* Nano spinning animation for the gauge */
+.nano-spin { 
+    transform-origin: 50% 50%; 
+    animation: spin 16s linear infinite; 
+}
+
+@keyframes spin { 
+    from { transform: rotate(0deg); } 
+    to { transform: rotate(360deg); } 
+}
+
+/* Status indicator animations */
+.status-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* Loading states */
+.loading-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Chart container styles */
+.chart-container {
+    position: relative;
+    height: 100%;
+    width: 100%;
+}
+
+/* Custom scrollbar for panels */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255,139,167,0.3);
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,139,167,0.5);
+}
+
+/* Connection status indicator */
+.connection-status {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 50;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.connection-status.connected {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+
+.connection-status.disconnected {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+.connection-status.connecting {
+    background: rgba(234, 179, 8, 0.2);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    color: #facc15;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .brand-card {
+        padding: 1rem;
+    }
+    
+    .chip {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+    }
+    
+    .nano-spin {
+        width: 200px !important;
+        height: 200px !important;
+    }
+}
+
+/* Focus states for accessibility */
+button:focus,
+select:focus,
+input:focus {
+    outline: 2px solid #FF8BA7;
+    outline-offset: 2px;
+}
+
+/* Hover effects */
+.btn-manage:hover {
+    background: rgba(255,255,255,.10);
+    border-color: rgba(255,179,193,.3);
+}
+
+/* Panel transitions */
+.panel-transition {
+    transition: all 0.3s ease-in-out;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.panel-transition.open {
+    max-height: 500px;
+}
